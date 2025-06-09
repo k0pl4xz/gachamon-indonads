@@ -33,7 +33,7 @@ export default function DashboardPage() {
       if (countError) throw countError
 
       if ((count ?? 0) >= maxLimit) {
-        toast.error(`Batas input tercapai: ${maxLimit} pilihan.`)
+        toast.error(`ID Telegram MAX: ${maxLimit} Nomor.`)
         return false
       }
 

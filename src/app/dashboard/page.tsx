@@ -52,8 +52,8 @@ export default function DashboardPage() {
     }
 
     const noPilihanInt = Number(noPilihan)
-    if (isNaN(noPilihanInt) || noPilihanInt < 1 || noPilihanInt > 5000) {
-      toast.error('Nomor harus antara 1-5000')
+    if (isNaN(noPilihanInt) || noPilihanInt < 1 || noPilihanInt > 100) {
+      toast.error('Nomor harus antara 1-100')
       return
     }
 

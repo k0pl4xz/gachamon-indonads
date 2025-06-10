@@ -73,25 +73,36 @@ export default function AdminPage() {
   }, [])
 
   const handleSearch = useCallback(async () => {
-    setLoading(true)
-    if (!searchTerm.trim()) {
-      fetchData()
-      return
-    }
+  setLoading(true)
+  if (!searchTerm.trim()) {
+    fetchData()
+    return
+  }
 
-    const { data, error } = await supabase
-      .from('undian_data')
-      .select('*')
-      .ilike(searchBy, `%${searchTerm}%`)
-      .order('id', { ascending: false })
+  let query = supabase
+    .from('undian_data')
+    .select('*')
+    .order('id', { ascending: false })
 
-    if (error) {
-      toast.error('Gagal melakukan pencarian')
-    } else {
-      setData(data)
+  if (searchBy === 'id_telegram') {
+    query = query.ilike(searchBy, `%${searchTerm}%`)
+  } else if (searchBy === 'no_pilihan') {
+    // Convert search term to number and do exact match for no_pilihan
+    const numberSearch = Number(searchTerm)
+    if (!isNaN(numberSearch)) {
+      query = query.eq(searchBy, numberSearch)
     }
-    setLoading(false)
-  }, [searchTerm, searchBy])
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    toast.error('Gagal melakukan pencarian')
+  } else {
+    setData(data)
+  }
+  setLoading(false)
+}, [searchTerm, searchBy])
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {

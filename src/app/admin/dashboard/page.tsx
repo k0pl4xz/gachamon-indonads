@@ -31,7 +31,7 @@ export default function AdminPage() {
   const [inputLimit, setInputLimit] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchBy, setSearchBy] = useState<'id_telegram' | 'address_mon'>('id_telegram')
+  const [searchBy, setSearchBy] = useState<'id_telegram' | 'no_pilihan'>('id_telegram')
 
   // Cek sesi login
   useEffect(() => {

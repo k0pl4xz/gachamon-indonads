@@ -128,10 +128,10 @@ export default function DashboardPage() {
             />
             
             <Input
-              placeholder="Nomor Pilihan (1-5000)"
+              placeholder="Nomor Pilihan (1-100)"
               type="number"
               min="1"
-              max="5000"
+              max="100"
               value={noPilihan}
               onChange={(e) => setNoPilihan(e.target.value)}
               className="bg-white border-blue-300 text-black"

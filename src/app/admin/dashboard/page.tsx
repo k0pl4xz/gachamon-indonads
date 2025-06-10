@@ -187,18 +187,18 @@ export default function AdminPage() {
           <div className="flex flex-col sm:flex-row gap-2">
             <Select
               value={searchBy}
-              onValueChange={(value: 'id_telegram' | 'address_mon') => setSearchBy(value)}
+              onValueChange={(value: 'id_telegram' | 'no_pilihan') => setSearchBy(value)}
             >
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Cari berdasarkan" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="id_telegram">ID Telegram</SelectItem>
-                <SelectItem value="address_mon">Address MON</SelectItem>
+                <SelectItem value="no_pilihan">No Pilihan</SelectItem>
               </SelectContent>
             </Select>
             <Input
-              placeholder={`Masukkan ${searchBy === 'id_telegram' ? 'ID Telegram' : 'Address MON'}...`}
+              placeholder={`Masukkan ${searchBy === 'id_telegram' ? 'ID Telegram' : 'No Pilihan'}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       valid: data.ok,
       username: data.result?.username || cleanId 
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { valid: false, error: 'Gagal verifikasi ID Telegram' },
       { status: 500 }

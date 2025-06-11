@@ -28,7 +28,8 @@ export default function DashboardPage() {
       try {
         const response = await fetch('/api/check-telegram', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache' },
           body: JSON.stringify({ idTelegram: idTelegram.replace(/^@/, '') })
         })
         const { valid } = await response.json()

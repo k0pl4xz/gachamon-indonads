@@ -28,7 +28,7 @@ export default function DashboardPage() {
       const { count, error: countError } = await supabase
         .from('undian_data')
         .select('*', { count: 'exact', head: true })
-        .eq('id_telegram', id_telegram)
+        .eq('id_telegram', id_telegram) // Pengecekan ini sekarang efektif karena ID sudah di-lowercase
 
       if (countError) throw countError
 
@@ -56,12 +56,19 @@ export default function DashboardPage() {
       toast.error('Nomor harus antara 1-100')
       return
     }
+    
+    
+    const normalizedIdTelegram = idTelegram.toLowerCase()
 
     setIsLoading(true)
 
     try {
-      const isAllowed = await checkLimit(idTelegram)
-      if (!isAllowed) return
+      
+      const isAllowed = await checkLimit(normalizedIdTelegram)
+      if (!isAllowed) {
+        setIsLoading(false) 
+        return
+      }
 
       const { data: existing } = await supabase
         .from('undian_data')
@@ -71,11 +78,13 @@ export default function DashboardPage() {
 
       if (existing) {
         toast.error('Nomor sudah terdaftar!')
+        setIsLoading(false) 
         return
       }
 
       const { error } = await supabase.from('undian_data').insert({
-        id_telegram: idTelegram,
+        
+        id_telegram: normalizedIdTelegram,
         address_mon: addressMon,
         no_pilihan: noPilihanInt,
       })
@@ -140,7 +149,7 @@ export default function DashboardPage() {
             <Button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="bg-purple-600 text-white hover:bg-purple-700"
+              className="w-full bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-400"
             >
               {isLoading ? 'Menyimpan...' : 'Submit'}
             </Button>
@@ -149,4 +158,4 @@ export default function DashboardPage() {
       </div>
     </div>
   )
-} 
+}

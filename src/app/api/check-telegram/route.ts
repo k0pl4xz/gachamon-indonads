@@ -3,29 +3,55 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   const { idTelegram } = await request.json()
   
-  if (!idTelegram) {
-    return NextResponse.json(
-      { error: 'ID Telegram diperlukan' },
-      { status: 400 }
-    )
-  }
+  // Normalisasi input
+  const cleanId = idTelegram.replace(/^@/, '').trim().toLowerCase() // handle case sensitivity
 
   try {
-    const cleanId = idTelegram.replace(/^@/, '')
-    const response = await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getChat?chat_id=${cleanId}`
-    )
-    const data = await response.json()
+    // Cek format username (5-32 chars, a-z0-9_)
+    if (!/^[a-z0-9_]{5,32}$/.test(cleanId)) {
+      return NextResponse.json(
+        { valid: false, error: "Format username tidak valid" },
+        { status: 400 }
+      )
+    }
 
-    return NextResponse.json({ 
-      valid: data.ok,
-      username: data.result?.username || cleanId 
+    // Gunakan kombinasi endpoint getChat + getChatMember
+    const [chatRes, memberRes] = await Promise.all([
+      fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getChat?chat_id=@${cleanId}`),
+      fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getChatMember?chat_id=@${cleanId}&user_id=@${cleanId}`)
+    ])
+
+    // Handle rate limiting
+    if (chatRes.status === 429 || memberRes.status === 429) {
+      return NextResponse.json(
+        { valid: false, error: "Terlalu banyak request" },
+        { status: 429 }
+      )
+    }
+
+    const [chatData, memberData] = await Promise.all([
+      chatRes.json(),
+      memberRes.json()
+    ])
+
+    // Validasi ganda
+    const isValid = chatData.ok && memberData.ok && 
+                   memberData.result?.status !== 'left'
+
+    return NextResponse.json({
+      valid: isValid,
+      username: cleanId,
+      details: isValid ? chatData.result : null
     })
+
   } catch (error) {
-    
-    console.error('Telegram API Error:', error)
+    console.error('Full Error:', error)
     return NextResponse.json(
-      { valid: false, error: 'Gagal verifikasi ID Telegram' },
+      { 
+        valid: false, 
+        error: "Internal server error",
+        debug: process.env.NODE_ENV === 'development' ? error.message : null
+      },
       { status: 500 }
     )
   }

@@ -34,7 +34,7 @@ export default function DashboardPage() {
         const { valid } = await response.json()
         setIsTelegramValid(valid)
         if (!valid) toast.error('ID Telegram tidak valid atau tidak ditemukan')
-      } catch (error) {
+      } catch {
         setIsTelegramValid(false)
         toast.error('Gagal memverifikasi ID Telegram')
       } finally {

@@ -19,7 +19,7 @@ export default function DashboardPage() {
   // Validasi real-time ID Telegram
   useEffect(() => {
     const checkTelegram = async () => {
-      if (!idTelegram || idTelegram.length < 3) {
+      if (!idTelegram || idTelegram.length < 5) {
         setIsTelegramValid(false)
         return
       }

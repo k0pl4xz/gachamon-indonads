@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gacha Mon - Undian Mon",
+  title: "GachaMon - Indonads",
   description: "For Indonads User",
 };
 

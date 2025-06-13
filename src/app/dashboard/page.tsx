@@ -148,7 +148,7 @@ export default function DashboardPage() {
             </h2>
 
             <Input
-              placeholder="Username Telegram"
+              placeholder="Username Telegram/DC"
               value={idTelegram}
               onChange={(e) => setIdTelegram(e.target.value)}
               className="bg-white border-blue-300 text-black"

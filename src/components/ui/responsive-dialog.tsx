@@ -45,12 +45,15 @@ export function ResponsiveDialog({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
+        {/* desktop */}
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
-          {children}
+          <div className="flex-1 overflow-y-auto p-1"> {/* oferflow */}
+            {children}
+          </div>
         </DialogContent>
       </Dialog>
     )
@@ -64,7 +67,10 @@ export function ResponsiveDialog({
           <DrawerTitle>{title}</DrawerTitle>
           {description && <DrawerDescription>{description}</DrawerDescription>}
         </DrawerHeader>
-        <div className="p-4">{children}</div>
+        {/* MOBILE PRENLI */}
+        <div className="p-4 overflow-y-auto max-h-[70vh]"> {/* overflow max-height */}
+          {children}
+        </div>
         <DrawerFooter className="pt-2">
           <DrawerClose asChild>
             <Button variant="outline">Tutup</Button>

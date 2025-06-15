@@ -16,12 +16,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Trophy } from 'lucide-react'
 
 type Undian = {
   id: number
   id_telegram: string
   address_mon: string
   no_pilihan: number
+  pemenang: boolean
 }
 
 export default function AdminPage() {
@@ -33,7 +36,6 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchBy, setSearchBy] = useState<'id_telegram' | 'no_pilihan'>('id_telegram')
 
-  // Cek sesi login
   useEffect(() => {
     async function checkSession() {
       const res = await fetch('/api/session')
@@ -42,20 +44,21 @@ export default function AdminPage() {
     checkSession()
   }, [router])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('undian_data')
       .select('*')
+      .order('pemenang', { ascending: false })
       .order('id', { ascending: false })
 
     if (error) {
       toast.error('Gagal memuat data')
     } else {
-      setData(data)
+      setData(data as Undian[])
     }
     setLoading(false)
-  }
+  }, []) 
 
   const fetchInputLimit = async () => {
     const { data, error } = await supabase
@@ -70,52 +73,46 @@ export default function AdminPage() {
   useEffect(() => {
     fetchData()
     fetchInputLimit()
-  }, [])
+  }, [fetchData]) 
 
   const handleSearch = useCallback(async () => {
-  setLoading(true)
-  if (!searchTerm.trim()) {
-    fetchData()
-    return
-  }
-
-  let query = supabase
-    .from('undian_data')
-    .select('*')
-    .order('id', { ascending: false })
-
-  if (searchBy === 'id_telegram') {
-    query = query.ilike(searchBy, `%${searchTerm}%`)
-  } else if (searchBy === 'no_pilihan') {
-    // Convert search term to number and do exact match for no_pilihan
-    const numberSearch = Number(searchTerm)
-    if (!isNaN(numberSearch)) {
-      query = query.eq(searchBy, numberSearch)
+    setLoading(true)
+    
+    if (!searchTerm.trim()) {
+      fetchData()
+      return
     }
-  }
 
-  const { data, error } = await query
+    let query = supabase
+      .from('undian_data')
+      .select('*')
+      .order('id', { ascending: false })
 
-  if (error) {
-    toast.error('Gagal melakukan pencarian')
-  } else {
-    setData(data)
-  }
-  setLoading(false)
-}, [searchTerm, searchBy])
+    if (searchBy === 'id_telegram') {
+      query = query.ilike(searchBy, `%${searchTerm}%`)
+    } else if (searchBy === 'no_pilihan') {
+      const numberSearch = Number(searchTerm)
+      if (!isNaN(numberSearch)) {
+        query = query.eq(searchBy, numberSearch)
+      }
+    }
 
+    const { data, error } = await query
+
+    if (error) {
+      toast.error('Gagal melakukan pencarian')
+    } else {
+      setData(data as Undian[])
+    }
+    setLoading(false)
+  }, [searchTerm, searchBy, fetchData]) 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (searchTerm.trim()) {
-        handleSearch()
-      } else {
-        fetchData()
-      }
+      handleSearch()
     }, 500)
 
     return () => clearTimeout(delayDebounceFn)
-  }, [searchTerm, searchBy, handleSearch])
-
+  }, [handleSearch]) 
   const handleUpdateLimit = async () => {
     if (inputLimit === null || isNaN(inputLimit)) return
     const { error } = await supabase
@@ -146,6 +143,53 @@ export default function AdminPage() {
       toast.success('Data berhasil dihapus')
       setSelected([])
       fetchData()
+    }
+  }
+
+  const handleSetWinner = async () => {
+    if (selected.length === 0) {
+      toast.info('Pilih minimal satu data untuk dijadikan pemenang.')
+      return
+    }
+
+    const confirmed = window.confirm(`Yakin ingin menjadikan ${selected.length} data terpilih sebagai pemenang?`)
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('undian_data')
+      .update({ pemenang: true })
+      .in('id', selected)
+
+    if (error) {
+      toast.error('Gagal menandai pemenang.')
+      console.error(error)
+    } else {
+      toast.success('Data terpilih berhasil ditandai sebagai pemenang!')
+      setSelected([])
+      fetchData()
+    }
+  }
+  
+  const handleCancelWinner = async () => {
+    if (selected.length === 0) {
+      toast.info('Pilih minimal satu data untuk dibatalkan status pemenangnya.')
+      return
+    }
+    const confirmed = window.confirm(`Yakin ingin MEMBATALKAN status pemenang pada ${selected.length} data terpilih?`)
+    if(!confirmed) return
+
+    const { error } = await supabase
+        .from('undian_data')
+        .update({ pemenang: false })
+        .in('id', selected)
+
+    if(error){
+        toast.error('Gagal membatalkan status pemenang.')
+        console.error(error)
+    } else {
+        toast.success('Status pemenang berhasil dibatalkan!')
+        setSelected([])
+        fetchData()
     }
   }
 
@@ -180,7 +224,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto mt-6 px-4 space-y-6">
+    <div className="max-w-7xl mx-auto mt-6 px-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold text-purple-600">Dashboard Admin</h1>
         <Button
@@ -215,21 +259,6 @@ export default function AdminPage() {
               className="flex-1"
             />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSearch} className="bg-purple-600 text-white">
-              Cari
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('')
-                fetchData()
-              }}
-              disabled={!searchTerm}
-            >
-              Reset
-            </Button>
-          </div>
         </div>
 
         {/* Limit Section */}
@@ -262,28 +291,46 @@ export default function AdminPage() {
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => handleExport('csv')}>
             Ekspor ke CSV
           </Button>
           <Button variant="outline" onClick={() => handleExport('xlsx')}>
             Ekspor ke XLSX
           </Button>
-        </div>
-                  <a href="/dashboard" target="_blank" rel="noopener noreferrer">
+          <a href="/dashboard" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" className="bg-green-600 text-white hover:bg-green-700">
               Input Undian
             </Button>
           </a>
-
-        <Button
-          variant="destructive"
-          onClick={handleDeleteSelected}
-          disabled={selected.length === 0}
-          className="w-full sm:w-auto"
-        >
-          Hapus Data Terpilih ({selected.length})
-        </Button>
+        </div>
+        
+        <div className="flex gap-2 flex-wrap justify-end">
+            <Button
+                variant="default"
+                onClick={handleSetWinner}
+                disabled={selected.length === 0}
+                className="w-full sm:w-auto bg-amber-500 text-white hover:bg-amber-600"
+            >
+                Set sebagai Pemenang ({selected.length})
+            </Button>
+            <Button
+                variant="outline"
+                onClick={handleCancelWinner}
+                disabled={selected.length === 0}
+                className="w-full sm:w-auto"
+            >
+                Batalkan Pemenang ({selected.length})
+            </Button>
+            <Button
+                variant="destructive"
+                onClick={handleDeleteSelected}
+                disabled={selected.length === 0}
+                className="w-full sm:w-auto"
+            >
+                Hapus Data Terpilih ({selected.length})
+            </Button>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -304,12 +351,13 @@ export default function AdminPage() {
                 <th className="text-left p-2">ID Telegram</th>
                 <th className="text-left p-2">Address MON</th>
                 <th className="text-left p-2">Nomor Pilihan</th>
+                <th className="text-left p-2">Status</th>
               </tr>
             </thead>
             <tbody>
               {data.length > 0 ? (
                 data.map((d) => (
-                  <tr key={d.id} className="border-t hover:bg-purple-50">
+                  <tr key={d.id} className={`border-t hover:bg-purple-50 ${d.pemenang ? 'bg-amber-100' : ''}`}>
                     <td className="p-2">
                       <Checkbox
                         checked={selected.includes(d.id)}
@@ -320,11 +368,18 @@ export default function AdminPage() {
                     <td className="p-2">{d.id_telegram}</td>
                     <td className="p-2">{d.address_mon}</td>
                     <td className="p-2">{d.no_pilihan}</td>
+                    <td className="p-2">
+                      {d.pemenang && (
+                        <Badge variant="default" className="bg-amber-500 text-white">
+                           <Trophy className="mr-1 h-3 w-3" /> Pemenang
+                        </Badge>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="text-center p-4 text-gray-500">
+                  <td colSpan={5} className="text-center p-4 text-gray-500">
                     Tidak ada data ditemukan
                   </td>
                 </tr>

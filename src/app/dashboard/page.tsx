@@ -176,7 +176,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4 pt-6">
             <div className="flex justify-center">
               <Image
-                src="/logo-mon.png"
+                src="/indonads.png"
                 alt="Logo"
                 width={50}
                 height={50}

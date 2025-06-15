@@ -4,20 +4,38 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabaseClient'
 import { toast } from 'sonner'
-
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ResponsiveDialog } from '@/components/ui/responsive-dialog' 
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog'
 
-import { Trophy } from 'lucide-react'
+import { Trophy, Medal, Award } from 'lucide-react'
 
 type Winner = {
   id_telegram: string
   no_pilihan: number
   address_mon: string
+  ranking: number | null
+  hadiah_mon: number | null
 }
+
+const RankIcon = ({ rank }: { rank: number | null }) => {
+    if (rank === 1) {
+        return <Medal className="mr-2 h-6 w-6 text-yellow-500" />
+    }
+    if (rank === 2) {
+        return <Award className="mr-2 h-6 w-6 text-slate-400" />
+    }
+    if (rank === 3) {
+        return <Trophy className="mr-2 h-6 w-6 text-orange-600" />
+    }
+    if (rank && rank > 3 && rank <=5) {
+        return <Trophy className="mr-2 h-6 w-6 text-amber-500" />
+    }
+    return <Trophy className="mr-2 h-6 w-6 text-gray-400" />;
+}
+
 
 export default function DashboardPage() {
   const [idTelegram, setIdTelegram] = useState<string>('')
@@ -131,15 +149,14 @@ export default function DashboardPage() {
     }
   }
 
-  
   const fetchWinners = async () => {
     setIsCheckingWinners(true)
     try {
         const { data, error } = await supabase
             .from('undian_data')
-            .select('id_telegram, no_pilihan, address_mon')
-            .eq('pemenang', true) 
-            .order('no_pilihan', { ascending: true })
+            .select('id_telegram, no_pilihan, address_mon, ranking, hadiah_mon')
+            .eq('pemenang', true)
+            .order('ranking', { ascending: true, nullsFirst: false })
 
         if (error) throw error;
         
@@ -168,7 +185,7 @@ export default function DashboardPage() {
               />
             </div>
             <h2 className="text-xl font-bold text-purple-700 text-center">
-              Form Undian $MON - Indonads User
+              Form Gacha$MON - Indonads User
             </h2>
 
             <Input
@@ -240,9 +257,8 @@ export default function DashboardPage() {
                 </div>
               </ResponsiveDialog>
 
-              {/* Cek Pemenang */}
               <ResponsiveDialog
-                title="Daftar Pemenang Undian"
+                title="Daftar Pemenang Gacha.mon"
                 trigger={
                     <Button
                         variant="default"
@@ -255,23 +271,27 @@ export default function DashboardPage() {
               >
                 <div className="py-4 space-y-4">
                     {isCheckingWinners ? (
-                        <p>Memuat data pemenang...</p>
+                        <p className='text-center'>Memuat data pemenang...</p>
                     ) : winners.length > 0 ? (
                         winners.map((winner) => (
-                            <Card key={winner.no_pilihan} className="bg-purple-50 border-purple-200">
+                            <Card key={winner.no_pilihan} className={`border-2 ${winner.ranking === 1 ? 'border-yellow-400' : 'border-purple-200'}`}>
                                 <CardHeader>
-                                    <div className="flex justify-between items-center">
-                                        <CardTitle className="flex items-center text-purple-800">
-                                            <Trophy className="mr-2 h-5 w-5 text-amber-500" />
-                                            Nomor Pemenang: {winner.no_pilihan}
+                                    <div className="flex justify-between items-start">
+                                        <CardTitle className="flex items-center text-purple-800 text-lg">
+                                            <RankIcon rank={winner.ranking} />
+                                            Juara #{winner.ranking}
                                         </CardTitle>
+                                        <Badge variant="secondary">No. {winner.no_pilihan}</Badge>
                                     </div>
                                 </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-semibold">ID:</span> {winner.id_telegram}
+                                <CardContent className="space-y-1">
+                                    <p className="text-sm text-gray-800">
+                                        <span className="font-semibold">Pemenang:</span> {winner.id_telegram}
                                     </p>
-                                    <p className="text-sm text-gray-600 break-all">
+                                    <p className="text-sm text-gray-800">
+                                      <span className="font-semibold">Hadiah:</span> {winner.hadiah_mon} $MON
+                                    </p>
+                                    <p className="text-xs text-gray-500 break-all pt-2">
                                       <span className="font-semibold">Address:</span> {winner.address_mon}
                                     </p>
                                 </CardContent>
@@ -279,12 +299,11 @@ export default function DashboardPage() {
                         ))
                     ) : (
                         <p className="text-center text-gray-500 py-4">
-                            Belum ada pemenang yang diumumkan. Tunggu Jam 21.00 Ya ^_^ Bareng k0pl4xz dan Romusha
+                            Belum ada pemenang yang diumumkan. <br /> Tunggu Pukul 21.00 bersama k0pl4xz X Romusha Untuk info selanjutnya ^_^
                         </p>
                     )}
                 </div>
               </ResponsiveDialog>
-
             </div>
           </CardContent>
         </Card>

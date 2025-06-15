@@ -19,12 +19,26 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Trophy } from 'lucide-react'
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
+
+
 type Undian = {
   id: number
   id_telegram: string
   address_mon: string
   no_pilihan: number
   pemenang: boolean
+  ranking: number | null
+  hadiah_mon: number | null 
 }
 
 export default function AdminPage() {
@@ -35,6 +49,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [searchBy, setSearchBy] = useState<'id_telegram' | 'no_pilihan'>('id_telegram')
+  const [winnerRank, setWinnerRank] = useState<string>('')
+  const [prizeAmount, setPrizeAmount] = useState<string>('')
+  const [isWinnerDialogOpen, setIsWinnerDialogOpen] = useState(false)
 
   useEffect(() => {
     async function checkSession() {
@@ -44,12 +61,13 @@ export default function AdminPage() {
     checkSession()
   }, [router])
 
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('undian_data')
       .select('*')
-      .order('pemenang', { ascending: false })
+      .order('ranking', { ascending: true, nullsFirst: false }) 
       .order('id', { ascending: false })
 
     if (error) {
@@ -59,6 +77,7 @@ export default function AdminPage() {
     }
     setLoading(false)
   }, []) 
+
 
   const fetchInputLimit = async () => {
     const { data, error } = await supabase
@@ -70,6 +89,7 @@ export default function AdminPage() {
     }
   }
 
+
   useEffect(() => {
     fetchData()
     fetchInputLimit()
@@ -77,17 +97,14 @@ export default function AdminPage() {
 
   const handleSearch = useCallback(async () => {
     setLoading(true)
-    
     if (!searchTerm.trim()) {
       fetchData()
       return
     }
-
     let query = supabase
       .from('undian_data')
       .select('*')
       .order('id', { ascending: false })
-
     if (searchBy === 'id_telegram') {
       query = query.ilike(searchBy, `%${searchTerm}%`)
     } else if (searchBy === 'no_pilihan') {
@@ -96,23 +113,24 @@ export default function AdminPage() {
         query = query.eq(searchBy, numberSearch)
       }
     }
-
     const { data, error } = await query
-
     if (error) {
       toast.error('Gagal melakukan pencarian')
     } else {
       setData(data as Undian[])
     }
     setLoading(false)
-  }, [searchTerm, searchBy, fetchData]) 
+  }, [searchTerm, searchBy, fetchData])
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       handleSearch()
     }, 500)
-
     return () => clearTimeout(delayDebounceFn)
-  }, [handleSearch]) 
+  }, [handleSearch])
+
+
+
   const handleUpdateLimit = async () => {
     if (inputLimit === null || isNaN(inputLimit)) return
     const { error } = await supabase
@@ -131,7 +149,6 @@ export default function AdminPage() {
     if (selected.length === 0) return
     const confirmed = window.confirm('Yakin ingin menghapus data terpilih?')
     if (!confirmed) return
-
     const { error } = await supabase
       .from('undian_data')
       .delete()
@@ -147,26 +164,38 @@ export default function AdminPage() {
   }
 
   const handleSetWinner = async () => {
-    if (selected.length === 0) {
-      toast.info('Pilih minimal satu data untuk dijadikan pemenang.')
+    const rank = Number(winnerRank)
+    const prize = Number(prizeAmount)
+
+    if (!winnerRank || !prizeAmount || isNaN(rank) || isNaN(prize)) {
+      toast.error('Ranking dan Hadiah MON harus diisi dengan angka yang valid.')
       return
     }
 
-    const confirmed = window.confirm(`Yakin ingin menjadikan ${selected.length} data terpilih sebagai pemenang?`)
-    if (!confirmed) return
+    if (selected.length === 0) {
+      toast.info('Tidak ada data yang dipilih.')
+      return
+    }
 
     const { error } = await supabase
       .from('undian_data')
-      .update({ pemenang: true })
+      .update({ 
+        pemenang: true,
+        ranking: rank,
+        hadiah_mon: prize
+       })
       .in('id', selected)
 
     if (error) {
       toast.error('Gagal menandai pemenang.')
       console.error(error)
     } else {
-      toast.success('Data terpilih berhasil ditandai sebagai pemenang!')
+      toast.success(`Data terpilih berhasil ditandai sebagai pemenang Ranking ${rank}!`)
       setSelected([])
       fetchData()
+      setIsWinnerDialogOpen(false) 
+      setWinnerRank('') 
+      setPrizeAmount('') 
     }
   }
   
@@ -175,12 +204,16 @@ export default function AdminPage() {
       toast.info('Pilih minimal satu data untuk dibatalkan status pemenangnya.')
       return
     }
-    const confirmed = window.confirm(`Yakin ingin MEMBATALKAN status pemenang pada ${selected.length} data terpilih?`)
+    const confirmed = window.confirm(`Yakin ingin MEMBATALKAN status pemenang pada ${selected.length} data terpilih? Ini akan menghapus ranking dan hadiahnya.`)
     if(!confirmed) return
 
     const { error } = await supabase
         .from('undian_data')
-        .update({ pemenang: false })
+        .update({ 
+            pemenang: false,
+            ranking: null, 
+            hadiah_mon: null 
+        })
         .in('id', selected)
 
     if(error){
@@ -192,7 +225,7 @@ export default function AdminPage() {
         fetchData()
     }
   }
-
+  
   const handleExport = (type: 'csv' | 'xlsx') => {
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
@@ -225,7 +258,8 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto mt-6 px-4 space-y-6">
-      <div className="flex justify-between items-center">
+        {/* ... (Toggle Search) ... */}
+        <div className="flex justify-between items-center">
         <h1 className="text-xl font-bold text-purple-600">Dashboard Admin</h1>
         <Button
           onClick={handleLogout}
@@ -234,9 +268,7 @@ export default function AdminPage() {
           Logout
         </Button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Search Section */}
         <div className="space-y-2">
           <Label className="text-purple-700 font-medium">Pencarian</Label>
           <div className="flex flex-col sm:flex-row gap-2">
@@ -260,8 +292,6 @@ export default function AdminPage() {
             />
           </div>
         </div>
-
-        {/* Limit Section */}
         <div className="space-y-2">
           <Label htmlFor="inputLimit" className="text-purple-700 font-medium">
             Batas Maksimal Input per ID Telegram
@@ -289,7 +319,8 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Action Buttons */}
+
+      {/* Act Button Updatte */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => handleExport('csv')}>
@@ -306,14 +337,42 @@ export default function AdminPage() {
         </div>
         
         <div className="flex gap-2 flex-wrap justify-end">
-            <Button
-                variant="default"
-                onClick={handleSetWinner}
-                disabled={selected.length === 0}
-                className="w-full sm:w-auto bg-amber-500 text-white hover:bg-amber-600"
-            >
-                Set sebagai Pemenang ({selected.length})
-            </Button>
+            <Dialog open={isWinnerDialogOpen} onOpenChange={setIsWinnerDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button
+                        variant="default"
+                        disabled={selected.length === 0}
+                        className="w-full sm:w-auto bg-amber-500 text-white hover:bg-amber-600"
+                    >
+                        Set sebagai Pemenang ({selected.length})
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Set Pemenang</DialogTitle>
+                        <DialogDescription>
+                           Masukkan ranking dan jumlah hadiah untuk {selected.length} data terpilih.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="ranking">Ranking</Label>
+                            <Input id="ranking" type="number" placeholder="Contoh: 1" value={winnerRank} onChange={e => setWinnerRank(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="hadiah">Hadiah $MON</Label>
+                            <Input id="hadiah" type="number" placeholder="Contoh: 100" value={prizeAmount} onChange={e => setPrizeAmount(e.target.value)}/>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                           <Button variant="outline">Batal</Button>
+                        </DialogClose>
+                        <Button onClick={handleSetWinner}>Simpan Pemenang</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <Button
                 variant="outline"
                 onClick={handleCancelWinner}
@@ -352,6 +411,8 @@ export default function AdminPage() {
                 <th className="text-left p-2">Address MON</th>
                 <th className="text-left p-2">Nomor Pilihan</th>
                 <th className="text-left p-2">Status</th>
+                <th className="text-left p-2">Ranking</th>
+                <th className="text-left p-2">Hadiah $MON</th>
               </tr>
             </thead>
             <tbody>
@@ -375,11 +436,13 @@ export default function AdminPage() {
                         </Badge>
                       )}
                     </td>
+                    <td className="p-2">{d.ranking ?? '-'}</td>
+                    <td className="p-2">{d.hadiah_mon ?? '-'}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="text-center p-4 text-gray-500">
+                  <td colSpan={7} className="text-center p-4 text-gray-500">
                     Tidak ada data ditemukan
                   </td>
                 </tr>
